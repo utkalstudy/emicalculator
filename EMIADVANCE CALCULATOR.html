@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EMI Calculator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #333;
+      --card-bg: #ffffff;
+      --input-bg: #f9f9f9;
+      --accent-color: #4aa3df;
+      --interest-color: #f37a7a;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --input-bg: #2c2c2c;
+      --accent-color: #2196f3;
+      --interest-color: #f06292;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      margin: 0;
+      padding: 20px;
+      color: var(--text-color);
+    }
+
+    .calculator {
+      background-color: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      padding: 30px;
+      max-width: 500px;
+      margin: auto;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      background: var(--input-bg);
+      color: var(--text-color);
+    }
+
+    .input-flex {
+      display: flex;
+      gap: 10px;
+    }
+
+    .input-flex input {
+      flex: 2;
+    }
+
+    .input-flex select {
+      flex: 1;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .calculate-btn, .toggle-btn, .pdf-btn {
+      flex: 1;
+      background-color: var(--accent-color);
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .calculate-btn:hover,
+    .toggle-btn:hover,
+    .pdf-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    .results, .amortization {
+      margin-top: 20px;
+    }
+
+    .results p {
+      text-align: center;
+    }
+
+    .chart {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background-image: conic-gradient(var(--accent-color) var(--percent), var(--interest-color) 0);
+      margin: 20px auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    th {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .center {
+      text-align: center;
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="calculator" id="pdf-content">
+    <h2>EMI Calculator</h2>
+
+    <div class="input-group">
+      <label for="amount">Loan Amount (₹)</label>
+      <input type="number" id="amount" placeholder="e.g. 500000">
+    </div>
+
+    <div class="input-group">
+      <label for="rate">Annual Interest Rate (%)</label>
+      <input type="number" id="rate" step="0.1" placeholder="e.g. 7.5">
+    </div>
+
+    <div class="input-group">
+      <label for="tenure">Loan Tenure</label>
+      <div class="input-flex">
+        <input type="number" id="tenure" placeholder="e.g. 5" />
+        <select id="tenureUnit">
+          <option value="years">Years</option>
+          <option value="months">Months</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button class="calculate-btn" onclick="calculateEMI()">Calculate</button>
+      <button class="toggle-btn" onclick="toggleTheme()">Toggle Mode</button>
+      <button class="pdf-btn" onclick="downloadPDF()">Download PDF</button>
+    </div>
+
+    <div class="results" id="results"></div>
+    <div class="chart" id="chart" style="--percent: 50%"></div>
+    <div class="amortization" id="amortization"></div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const current = document.body.getAttribute('data-theme');
+      document.body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    }
+
+    function calculateEMI() {
+      const amount = parseFloat(document.getElementById("amount").value);
+      const rate = parseFloat(document.getElementById("rate").value) / 12 / 100;
+      let tenure = parseFloat(document.getElementById("tenure").value);
+      const unit = document.getElementById("tenureUnit").value;
+
+      if (!amount || !rate || !tenure) {
+        alert("Please fill all fields with valid values.");
+        return;
+      }
+
+      if (unit === "years") {
+        tenure *= 12;
+      }
+
+      const emi = (amount * rate * Math.pow(1 + rate, tenure)) / (Math.pow(1 + rate, tenure) - 1);
+      const totalPayment = emi * tenure;
+      const totalInterest = totalPayment - amount;
+
+      document.getElementById("results").innerHTML = `
+        <p><strong>Monthly EMI:</strong> ₹${emi.toFixed(2)}</p>
+        <p><strong>Total Interest:</strong> ₹${totalInterest.toFixed(2)}</p>
+        <p><strong>Total Payment:</strong> ₹${totalPayment.toFixed(2)}</p>
+      `;
+
+      document.getElementById("chart").style.setProperty("--percent", `${100 - (totalInterest / totalPayment) * 100}%`);
+
+      generateAmortizationSchedule(amount, rate, tenure, emi);
+    }
+
+    function generateAmortizationSchedule(principal, rate, tenure, emi) {
+      let balance = principal;
+      const schedule = [];
+
+      for (let i = 1; i <= tenure; i++) {
+        const interest = balance * rate;
+        const principalPayment = emi - interest;
+        balance -= principalPayment;
+        schedule.push({
+          month: i,
+          principal: principalPayment,
+          interest: interest,
+          balance: balance > 0 ? balance : 0
+        });
+      }
+
+      let html = `<h3 class="center">Amortization Schedule</h3>
+        <table>
+          <tr>
+            <th>Month</th>
+            <th>Principal</th>
+            <th>Interest</th>
+            <th>Balance</th>
+          </tr>`;
+      schedule.forEach(p => {
+        html += `
+          <tr>
+            <td>${p.month}</td>
+            <td>₹${p.principal.toFixed(2)}</td>
+            <td>₹${p.interest.toFixed(2)}</td>
+            <td>₹${p.balance.toFixed(2)}</td>
+          </tr>
+        `;
+      });
+      html += `</table>`;
+      document.getElementById("amortization").innerHTML = html;
+    }
+
+    function downloadPDF() {
+      const element = document.getElementById("pdf-content");
+      const opt = {
+        margin:       0.5,
+        filename:     'EMI_Calculator_Report.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().from(element).set(opt).save();
+    }
+  </script>
+</body>
+</html>
